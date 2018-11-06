@@ -3,9 +3,14 @@ hw5
 Brennan Baker
 November 6, 2018
 
--   [Load the data](#load-the-data)
--   [Create final df from loaded data](#create-final-df-from-loaded-data)
--   [Make spaghetti plot](#make-spaghetti-plot)
+-   [Problem 1](#problem-1)
+    -   [Load the data](#load-the-data)
+    -   [Create final df from loaded data](#create-final-df-from-loaded-data)
+    -   [Make spaghetti plot](#make-spaghetti-plot)
+-   [Problem 2](#problem-2)
+    -   [Load the data](#load-the-data-1)
+    -   [Description of data](#description-of-data)
+    -   [Homicides by city](#homicides-by-city)
 
 ``` r
 library(tidyverse)
@@ -21,6 +26,9 @@ library(tidyverse)
     ## -- Conflicts --------------------------------------------------------------- tidyverse_conflicts() --
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
+
+Problem 1
+=========
 
 ### Load the data
 
@@ -305,11 +313,66 @@ final_df %>%
 
 In the experimental arm, the value of the observations increased over time, while in the control arm, there was no change in observations over time.
 
-This zip file contains data from a longitudinal study that included a control arm and an experimental arm. Data for each participant is included in a separate file, and file names include the subject ID and arm.
+Problem 2
+=========
 
-Create a tidy dataframe containing data from all participants, including the subject ID, arm, and observations over time:
+### Load the data
 
-Start with a dataframe containing all file names; the list.files function will help Iterate over file names and read in data for each subject using purrr::map and saving the result as a new variable in the dataframe Tidy the result; manipulate file names to include control arm and subject ID, make sure weekly observations are “tidy”, and do any other tidying that’s necessary Make a spaghetti plot showing observations on each subject over time, and comment on differences between groups.
+``` r
+homicides_df = read_csv(file = "./data-homicides-master/homicide-data.csv")
+```
+
+    ## Parsed with column specification:
+    ## cols(
+    ##   uid = col_character(),
+    ##   reported_date = col_integer(),
+    ##   victim_last = col_character(),
+    ##   victim_first = col_character(),
+    ##   victim_race = col_character(),
+    ##   victim_age = col_character(),
+    ##   victim_sex = col_character(),
+    ##   city = col_character(),
+    ##   state = col_character(),
+    ##   lat = col_double(),
+    ##   lon = col_double(),
+    ##   disposition = col_character()
+    ## )
+
+### Description of data
+
+The raw data contains a row for each victim of a homicide. The information on each observation includes demographic information of the victim, the location of the killing (city, state, longitude, and latitude), the date of the homicide, and whether an arrest was made (disposition). Each row also has a unique id.
+
+### Homicides by city
+
+This code first uses summarize to make a df with the number of homicides by disposition. The second summarize function sums the total homicides and the number of unsolved homicides in each city.
+
+``` r
+unsolved = homicides_df %>% 
+  mutate(city_state = str_c(city, ",\ ", state)) %>% 
+  group_by(city_state, disposition) %>% 
+  summarize(number_homicides = n()) %>%
+  summarize(total_homicides = sum(number_homicides),
+            unsolved_homicides = sum(number_homicides[disposition != "Closed by arrest"]))
+
+unsolved
+```
+
+    ## # A tibble: 51 x 3
+    ##    city_state      total_homicides unsolved_homicides
+    ##    <chr>                     <int>              <int>
+    ##  1 Albuquerque, NM             378                146
+    ##  2 Atlanta, GA                 973                373
+    ##  3 Baltimore, MD              2827               1825
+    ##  4 Baton Rouge, LA             424                196
+    ##  5 Birmingham, AL              800                347
+    ##  6 Boston, MA                  614                310
+    ##  7 Buffalo, NY                 521                319
+    ##  8 Charlotte, NC               687                206
+    ##  9 Chicago, IL                5535               4073
+    ## 10 Cincinnati, OH              694                309
+    ## # ... with 41 more rows
+
+There were 2827 total homicides in Baltimore, MD, of which 1825 were unsolved.
 
 Problem 2 The Washington Post has gathered data on homicides in 50 large U.S. cities and made the data available through a GitHub repository here. You can read their accompanying article here.
 
