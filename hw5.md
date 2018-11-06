@@ -5,6 +5,7 @@ November 6, 2018
 
 -   [Load the data](#load-the-data)
 -   [Create final df from loaded data](#create-final-df-from-loaded-data)
+-   [Make spaghetti plot](#make-spaghetti-plot)
 
 ``` r
 library(tidyverse)
@@ -275,11 +276,34 @@ for (i in 2:length(loaded_data)) {
 }
 
 #tidy by gathering week, then remove redundant "week" in each value (turn "week_1" into "1")
+#change con and exp for nicer plot labels
 final_df = final_df %>% 
   gather(key = week, value = observation, week_1:week_8) %>% 
   separate(week, into = c("remove", "week"), sep = "_") %>%
-  select(-remove)
+  select(-remove) %>% 
+  mutate(arm = replace(arm, arm == "con", "control"),
+         arm = replace(arm, arm == "exp", "experimental"))
 ```
+
+### Make spaghetti plot
+
+``` r
+final_df %>% 
+  mutate(week = as.numeric(week)) %>% 
+  ggplot(aes(x = week, y = observation, color = subject_id)) +
+  geom_line() +
+  facet_grid(~arm) +
+  labs(
+    title = "Observations over time in each arm",
+    x = "Week",
+    y = "Observation"
+  ) + 
+  theme_bw()
+```
+
+![](hw5_files/figure-markdown_github/spaghetti%20plot-1.png)
+
+In the experimental arm, the value of the observations increased over time, while in the control arm, there was no change in observations over time.
 
 This zip file contains data from a longitudinal study that included a control arm and an experimental arm. Data for each participant is included in a separate file, and file names include the subject ID and arm.
 
