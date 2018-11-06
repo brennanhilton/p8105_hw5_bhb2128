@@ -12,7 +12,7 @@ library(tidyverse)
 ```
 
 
-# Load the data
+### Load the data
 
 ```{r load data}
 file_names = list.files(path = "./data") #make list of file names
@@ -28,35 +28,27 @@ load_data = function(x) {
   
 }
 
-test2 = map(file_names, load_data)
+loaded_data = map(file_names, load_data)
 
 ```
 
+### Create final df from loaded data
 
-```{r}
-library(rnoaa)
+```{r final df}
+#initialize the final_df with one participants data
+final_df = loaded_data[[1]] 
 
-weather = 
-  meteo_pull_monitors(c("USW00094728", "USC00519397", "USS0023B17S"),
-                      var = c("PRCP", "TMIN", "TMAX"), 
-                      date_min = "2016-01-01",
-                      date_max = "2016-12-31") %>%
-  mutate(
-    name = recode(id, USW00094728 = "CentralPark_NY", 
-                      USC00519397 = "Waikiki_HA",
-                      USS0023B17S = "Waterhole_WA"),
-    tmin = tmin / 10,
-    tmax = tmax / 10) %>%
-  select(name, id, everything())
+#add data from other participants by iterating through loaded data and binding rows
+for (i in 2:length(loaded_data)) {
+  final_df = bind_rows(final_df,loaded_data[[i]])
+}
+
+#tidy by gathering week, then remove redundant "week" in each value (turn "week_1" into "1")
+final_df = final_df %>% 
+  gather(key = week, value = observation, week_1:week_8) %>% 
+  separate(week, into = c("remove", "week"), sep = "_") %>%
+  select(-remove)
 ```
-
-```{r}
-weather_nest = 
-  nest(weather, date:tmin)
-
-weather_nest
-```
-
 
 
 
