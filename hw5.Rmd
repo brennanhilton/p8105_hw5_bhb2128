@@ -88,23 +88,66 @@ The raw data contains a row for each victim of a homicide. The information on ea
 
 This code first uses summarize to make a df with the number of homicides by disposition. The second summarize function sums the total homicides and the number of unsolved homicides in each city.
 ```{r}
-unsolved = homicides_df %>% 
+homicides_df = homicides_df %>% 
   mutate(city_state = str_c(city, ",\ ", state)) %>% 
   group_by(city_state, disposition) %>% 
   summarize(number_homicides = n()) %>%
   summarize(total_homicides = sum(number_homicides),
             unsolved_homicides = sum(number_homicides[disposition != "Closed by arrest"]))
 
-unsolved
 ```
 
 There were 2827 total homicides in Baltimore, MD, of which 1825 were unsolved.
 
-```{r}
+### prop.test
 
+As an argument, prop.test takes a two-dimensional table (or matrix) with 2 columns, giving the counts of successes and failures, respectively. Alternatively, you can set x = numerator, n = denominator for the proportion. 
+```{r}
+proptest = unsolved %>% 
+  mutate(solved_homicides = total_homicides - unsolved_homicides) %>% 
+  filter(city_state == "Baltimore, MD") %>% 
+  select(unsolved_homicides, solved_homicides)
+```
+
+Just for balitmore
+```{r baltimore prop}
+baltimore_proptest = prop.test(x = 1825, n = 2827)
+broom::tidy(baltimore_proptest) %>% 
+  select(estimate, conf.low, conf.high)
 ```
 
 
+
+While dataset
+```{r}
+unsolved_homicides = function(x) {
+  
+  unsolved = homicides_df[["unsolved_homicides"]][[x]]
+  unsolved
+  
+}
+
+total_homicides = function(x) {
+  
+  total = homicides_df[["total_homicides"]][[x]]
+  total
+  
+}
+
+for (i in 1:nrow(homicides_df)) {
+  homicides_df = homicides_df %>% 
+    mutate(prop_test = list(
+      broom::tidy(
+        prop.test(x = unsolved_homicides(i), n = total_homicides(i))) %>% 
+        select(estimate, conf.low, conf.high)))
+}
+
+```
+
+```{r}
+homicides_df %>% 
+  mutate(prop_test = map())
+```
 
 Problem 2
 The Washington Post has gathered data on homicides in 50 large U.S. cities and made the data available through a GitHub repository here. You can read their accompanying article here.
