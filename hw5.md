@@ -11,6 +11,8 @@ November 6, 2018
     -   [Load the data](#load-the-data-1)
     -   [Description of data](#description-of-data)
     -   [Homicides by city](#homicides-by-city)
+    -   [prop.test](#prop.test)
+    -   [Plots](#plots)
 
 ``` r
 library(tidyverse)
@@ -347,38 +349,79 @@ The raw data contains a row for each victim of a homicide. The information on ea
 This code first uses summarize to make a df with the number of homicides by disposition. The second summarize function sums the total homicides and the number of unsolved homicides in each city.
 
 ``` r
-unsolved = homicides_df %>% 
+homicides_df = homicides_df %>% 
   mutate(city_state = str_c(city, ",\ ", state)) %>% 
   group_by(city_state, disposition) %>% 
   summarize(number_homicides = n()) %>%
   summarize(total_homicides = sum(number_homicides),
             unsolved_homicides = sum(number_homicides[disposition != "Closed by arrest"]))
-
-unsolved
 ```
-
-    ## # A tibble: 51 x 3
-    ##    city_state      total_homicides unsolved_homicides
-    ##    <chr>                     <int>              <int>
-    ##  1 Albuquerque, NM             378                146
-    ##  2 Atlanta, GA                 973                373
-    ##  3 Baltimore, MD              2827               1825
-    ##  4 Baton Rouge, LA             424                196
-    ##  5 Birmingham, AL              800                347
-    ##  6 Boston, MA                  614                310
-    ##  7 Buffalo, NY                 521                319
-    ##  8 Charlotte, NC               687                206
-    ##  9 Chicago, IL                5535               4073
-    ## 10 Cincinnati, OH              694                309
-    ## # ... with 41 more rows
 
 There were 2827 total homicides in Baltimore, MD, of which 1825 were unsolved.
 
-Problem 2 The Washington Post has gathered data on homicides in 50 large U.S. cities and made the data available through a GitHub repository here. You can read their accompanying article here.
+### prop.test
 
-Describe the raw data. Create a city\_state variable (e.g. “Baltimore, MD”) and then summarize within cities to obtain the total number of homicides and the number of unsolved homicides (those for which the disposition is “Closed without arrest” or “Open/No arrest”).
+As an argument, prop.test takes a two-dimensional table (or matrix) with 2 columns, giving the counts of successes and failures, respectively. Alternatively, you can set x = numerator, n = denominator for the proportion.
 
-For the city of Baltimore, MD, use the prop.test function to estimate the proportion of homicides that are unsolved; save the output of prop.test as an R object, apply the broom::tidy to this object and pull the estimated proportion and confidence intervals from the resulting tidy dataframe.
+Prop.test just for balitmore. In the tibble below we can see the estimate and the CIs from the test.
+
+``` r
+baltimore_proptest = prop.test(x = 1825, n = 2827)
+broom::tidy(baltimore_proptest) %>% 
+  select(estimate, conf.low, conf.high)
+```
+
+    ## # A tibble: 1 x 3
+    ##   estimate conf.low conf.high
+    ##      <dbl>    <dbl>     <dbl>
+    ## 1    0.646    0.628     0.663
+
+Prop. tests for every city
+
+``` r
+#Below is a function that does a prop. test for a given row of the homicides_df
+prop_test_function = function(x) {
+  
+  test_result =
+        broom::tidy(
+          prop.test(x = homicides_df[["unsolved_homicides"]][[x]], homicides_df[["total_homicides"]][[x]])) %>% 
+            select(estimate, conf.low, conf.high)
+  test_result
+}
+
+#Below is a map function that runs the prop. test on each row and saves the results to a list of lists. Then I unnest for later graphing
+output = map(1:nrow(homicides_df), prop_test_function)
+```
+
+    ## Warning in prop.test(x = homicides_df[["unsolved_homicides"]][[x]],
+    ## homicides_df[["total_homicides"]][[x]]): Chi-squared approximation may be
+    ## incorrect
+
+``` r
+#Below I create a df with the new prop. tests saved as a list column
+homicides_df_prop_tests = homicides_df %>%
+  mutate(prop_test = output) %>% 
+  unnest() %>% 
+  janitor::clean_names()
+```
+
+### Plots
+
+``` r
+homicides_df_prop_tests %>% 
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=conf_low, ymax=conf_high)) +
+  labs(
+    title = "Unsolved cases by city",
+    x = "City",
+    y = "Proportion of cases unsolved"
+  ) + 
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+![](hw5_files/figure-markdown_github/unnamed-chunk-2-1.png)
 
 Now run prop.test for each of the cities in your dataset, and extract both the proportion of unsolved homicides and the confidence interval for each. Do this within a “tidy” pipeline, making use of purrr::map, purrr::map2, list columns and unnest as necessary to create a tidy dataframe with estimated proportions and CIs for each city.
 
