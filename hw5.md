@@ -34,17 +34,32 @@ Problem 1
 
 ### Load the data
 
+``` r
+# Makes a data frame with 1 column of all file names from the data folder.
+file_names = list.files(path = "./data") #make list of file names
+
+# This function loads data into a data frame and saves information in the name of the file as two columns in the data frame, arm and subject_id.
+load_data = function(x) {
+  
+  df = read_csv(file = str_c("./data/", x)) %>% 
+    mutate(file = x) %>% #adds col with file name
+    separate(file, into = c("file", "remove"), sep = "\\.") %>% #removes .csv from file col
+    select(-remove) %>% 
+    separate(file, into = c("arm", "subject_id"), sep = "_") #separate file col into arm and id
+  df
+  
+}
+
+# Map function that runs the load_data function on all file names saved in the file_names df, and daves the output as a list column in a new df called final_df. Then I unnest.
+final_df = 
+  tibble(file_names) %>% 
+    mutate(data = map(file_names, load_data)) %>% 
+      unnest()
+```
+
 ### Create final df from loaded data
 
 ``` r
-# Initialize output of the for loop, final_df, with one participants data
-final_df = loaded_data[[1]] 
-
-# Add data from other participants by iterating through loaded data (produced in the map function above) and binding rows to the final_df.
-for (i in 2:length(loaded_data)) {
-  final_df = bind_rows(final_df,loaded_data[[i]])
-}
-
 # Tidy by gathering week, then remove redundant "week" in each value (turn "week_1" into "1")
 final_df = final_df %>% 
   gather(key = week, value = observation, week_1:week_8) %>% 
@@ -164,21 +179,16 @@ prop_test_function = function(x) {
   test_result
 }
 
-#Below is a map function that runs the prop. test on each row and saves the results to a list of lists (output)
-output = map(1:nrow(homicides_df), prop_test_function)
+#Below is a map function that runs the prop. test on each row and saves the results to a list column in a new data frame. Then I unnest the list column for graphing below.
+homicides_df_prop_tests = homicides_df %>%
+  mutate(prop_test = map(1:nrow(homicides_df), prop_test_function)) %>% 
+  unnest() %>% 
+  janitor::clean_names()
 ```
 
     ## Warning in prop.test(x = homicides_df[["unsolved_homicides"]][[x]],
     ## homicides_df[["total_homicides"]][[x]]): Chi-squared approximation may be
     ## incorrect
-
-``` r
-#Below I create a df with the new prop. tests saved as a list column called "prop_test." Then I unnest the list column for graphing below.
-homicides_df_prop_tests = homicides_df %>%
-  mutate(prop_test = output) %>% 
-  unnest() %>% 
-  janitor::clean_names()
-```
 
 ### Prop. test plot
 

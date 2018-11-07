@@ -15,7 +15,7 @@ library(tidyverse)
 
 ### Load the data
 
-```{r load data, include = FALSE}
+```{r load data, message = FALSE}
 # Makes a data frame with 1 column of all file names from the data folder.
 file_names = list.files(path = "./data") #make list of file names
 
@@ -31,22 +31,17 @@ load_data = function(x) {
   
 }
 
-# Map function that runs the load_data function on all file names saved in the file_names df.
-loaded_data = map(file_names, load_data)
+# Map function that runs the load_data function on all file names saved in the file_names df, and daves the output as a list column in a new df called final_df. Then I unnest.
+final_df = 
+  tibble(file_names) %>% 
+    mutate(data = map(file_names, load_data)) %>% 
+      unnest()
 
 ```
 
 ### Create final df from loaded data
 
-```{r final df}
-# Initialize output of the for loop, final_df, with one participants data
-final_df = loaded_data[[1]] 
-
-# Add data from other participants by iterating through loaded data (produced in the map function above) and binding rows to the final_df.
-for (i in 2:length(loaded_data)) {
-  final_df = bind_rows(final_df,loaded_data[[i]])
-}
-
+```{r tidy final df}
 # Tidy by gathering week, then remove redundant "week" in each value (turn "week_1" into "1")
 final_df = final_df %>% 
   gather(key = week, value = observation, week_1:week_8) %>% 
@@ -89,7 +84,7 @@ The raw data contains a row for each victim of a homicide. The information on ea
 ### Homicides by city
 
 After crerating a new city_state variable, the code below uses summarize to make a df with the number of homicides in each city_state by disposition. The second summarize function sums the total homicides and the number of unsolved homicides in each city.
-```{r}
+```{r homicides by city}
 homicides_df = homicides_df %>% 
   mutate(city_state = str_c(city, ",\ ", state)) %>% 
   group_by(city_state, disposition) %>% 
@@ -125,12 +120,9 @@ prop_test_function = function(x) {
   test_result
 }
 
-#Below is a map function that runs the prop. test on each row and saves the results to a list of lists (output)
-output = map(1:nrow(homicides_df), prop_test_function)
-
-#Below I create a df with the new prop. tests saved as a list column called "prop_test." Then I unnest the list column for graphing below.
+#Below is a map function that runs the prop. test on each row and saves the results to a list column in a new data frame. Then I unnest the list column for graphing below.
 homicides_df_prop_tests = homicides_df %>%
-  mutate(prop_test = output) %>% 
+  mutate(prop_test = map(1:nrow(homicides_df), prop_test_function)) %>% 
   unnest() %>% 
   janitor::clean_names()
 
