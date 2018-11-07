@@ -15,7 +15,7 @@ library(tidyverse)
 
 ### Load the data
 
-```{r load data}
+```{r load data, include = FALSE}
 # Makes a data frame with 1 column of all file names from the data folder.
 file_names = list.files(path = "./data") #make list of file names
 
@@ -102,7 +102,7 @@ homicides_df
 
 For example, we can see from above that there were 2827 total homicides in Baltimore, MD, of which 1825 were unsolved.
 
-### prop.test
+### Prop. test
 
 As an argument, prop.test takes a two-dimensional table (or matrix) with 2 columns, giving the counts of successes and failures, respectively. Alternatively, you can set x = numerator, n = denominator for the proportion. 
 
